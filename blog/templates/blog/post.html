@@ -1,0 +1,7 @@
+{% extends 'blog/base.html' %}
+
+{% block content %}
+<p>Post: {{ post.title }}</p>
+<p>{{ post.text|linebreaks }}</p>
+<p>{{ post.date_added|date:'M d, Y H:i' }}</p>
+{% endblock content %}

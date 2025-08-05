@@ -1,0 +1,10 @@
+{% extends "blog/base.html" %}
+
+{% block content %}
+<p>Create a new post:</p>
+<form action="{% url 'blog:new_post' blog_id %}" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_div }}
+    <button name="submit">add post</button>
+</form>
+{% endblock content %}

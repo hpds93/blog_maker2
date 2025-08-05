@@ -1,0 +1,13 @@
+{% extends 'blog/base.html' %}
+
+{% block content %}
+<p><a href="{% url 'blog:edit_blog' blog_id %}">Edit blog</a></p>
+<a href="{% url 'blog:new_post' blog_id %}">New post</a>
+<p>Added posts:</p>
+{% for post in posts %}
+  <p><a href="{% url 'blog:edit_post' post.id %}">{{ post.title }} {{ post.text|truncatechars:20 }} {{ post.date_added }}</a></p>
+  <img src="{{ post.image.url }}" alt="post image">
+{% empty %}
+  <p>No posts...</p>
+{% endfor %}
+{% endblock content %}
