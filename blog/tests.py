@@ -7,6 +7,8 @@ from .models import Blog
 
 User = get_user_model()
 
+# criar 3 usuários para todo o módulo?
+
 
 class MyBlogsViewTests(TestCase):
     @classmethod
@@ -72,17 +74,62 @@ class MyBlogsViewTests(TestCase):
         # Ensures tha the user with no blogs see the correct message.
         self.assertContains(response, 'No blogs added...')
 
+        # Ensures that exists 3 users.
+        self.assertEqual(len(User.objects.all()), 3)
 
-#commit
-# new_blog
-    # unauthenticated user receives 404? redirected to login?
-    # authenticated user can create blog for other user? permissions?
-    # new blogs are vinculated to an user?
+class NewBlogViewTests(TestCase):
+    def test_there_is_no_users_created(self):
+        self.assertEqual(len(User.objects.all()), 0)
+
+    def test_unauthenticated_user_is_redirected_to_login(self):
+        new_blog_url = reverse("blog:new_blog")
+        response = self.client.get(new_blog_url)
+        query_string = urlencode({'next': new_blog_url})
+        login_url = reverse("accounts:login")
+        self.assertRedirects(response, f"{login_url}?{query_string}")
+
+        #post
+        #n logado;tentar criar blog;redirect to login;login;redir to myblogs?
+    
+    def test_new_blog_are_associated_to_correct_user(self):
+        user = User.objects.create_user(
+            username='Testuser',
+            email='testemail@example.com',
+            password='mypassword123')
+        
+        # Ensures blogs were created.
+        self.client.force_login(user)
+        new_blog_url = reverse("blog:new_blog")
+        self.assertEqual(user.blog_set.count(), 0)
+        response = self.client.post(new_blog_url, data={'title': "Title"})
+        self.assertEqual(user.blog_set.count(), 1)
+
+        # Ensures that after creating the blog, it is 
+        # successfully redirected to my_blogs.
+        my_blogs_url = reverse("blog:my_blogs")
+        self.assertRedirects(response, my_blogs_url)
+
+        # Ensures created blogs are acessible.
+        response = self.client.get(my_blogs_url)
+        blogs = user.blog_set.all()
+        self.assertCountEqual(
+            blogs.values_list('id', flat=True),
+            response.context['blogs'].values_list('id', flat=True))
+        
+        # test with 2 blogs?
 
 
-# edit_blog
+class EditBlogViewTests(TestCase):
+    def test_unauthenticated_user_is_redirected_to_login(self):
+        edit_blog_url = reverse("blog:edit_blog")
+        response = self.client.get(edit_blog_url)
+        query_string = urlencode({'next': edit_blog_url})
+        login_url = reverse("accounts:login")
+        self.assertRedirects(response, f"{login_url}?{query_string}")
+
     # unauthenticated user receives 404? redirected to login?
     # authenticated user can edit blog for other user? permissions?
+    # tentar acessar blog d eoutro usuário n autenticado; ser redirecionado para login + query next; autenticar e ver se é redirecionado para editar blog de outro usuário
 
 
 # posts
