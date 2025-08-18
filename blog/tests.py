@@ -7,7 +7,11 @@ from .models import Blog
 
 User = get_user_model()
 
-# criar 3 usuários para todo o módulo?
+
+# create base class to create users, blogs, urls, etc...
+
+
+# class IndexViewTests
 
 
 class MyBlogsViewTests(TestCase):
@@ -33,7 +37,7 @@ class MyBlogsViewTests(TestCase):
             for _ in range(3):
                 Blog.objects.create(user=user, title='Test')
 
-    def test_unauthenticated_user_is_redirected_to_login_url(self):
+    def test_unauthenticated_user_is_redirected_to_login(self):
         # Ensures that no user is logged in.
         self.client.logout()
         self.assertIsNone(self.client.session.get("_auth_user_id"))
@@ -91,7 +95,7 @@ class NewBlogViewTests(TestCase):
         #post
         #n logado;tentar criar blog;redirect to login;login;redir to myblogs?
     
-    def test_new_blog_are_associated_to_correct_user(self):
+    def test_new_blog_is_associated_to_correct_user(self):
         user = User.objects.create_user(
             username='Testuser',
             email='testemail@example.com',
@@ -101,7 +105,7 @@ class NewBlogViewTests(TestCase):
         self.client.force_login(user)
         new_blog_url = reverse("blog:new_blog")
         self.assertEqual(user.blog_set.count(), 0)
-        response = self.client.post(new_blog_url, data={'title': "Title"})
+        response = self.client.post(new_blog_url, data={'title': "Title"}) # testar se o blog tem realmente esse title?
         self.assertEqual(user.blog_set.count(), 1)
 
         # Ensures that after creating the blog, it is 
@@ -120,56 +124,114 @@ class NewBlogViewTests(TestCase):
 
 
 class EditBlogViewTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = User.objects.create_user(
+            username='Testuser',
+            email='testemail@example.com',
+            password='mypassword123')
+        cls.user2 = User.objects.create_user(
+            username='Testuser2',
+            email='testemail2@example.com',
+            password='mypassword123')
+        cls.blog = Blog.objects.create(user=cls.user, title='Test') # cls.user blog.
+        cls.blog2 = Blog.objects.create(user=cls.user2, title='Test2') # cls.user2 blog.
+        # Url for editing cls.blog.
+        cls.edit_blog_url = reverse("blog:edit_blog", kwargs={"blog_id": cls.blog.id})
+        # Url for editing cls.blog2.
+        cls.edit_blog_url2 = reverse("blog:edit_blog", kwargs={"blog_id": cls.blog2.id})
+
     def test_unauthenticated_user_is_redirected_to_login(self):
-        edit_blog_url = reverse("blog:edit_blog")
-        response = self.client.get(edit_blog_url)
-        query_string = urlencode({'next': edit_blog_url})
+        response = self.client.get(self.edit_blog_url)
+        query_string = urlencode({'next': self.edit_blog_url})
         login_url = reverse("accounts:login")
         self.assertRedirects(response, f"{login_url}?{query_string}")
 
-    # unauthenticated user receives 404? redirected to login?
-    # authenticated user can edit blog for other user? permissions?
-    # tentar acessar blog d eoutro usuário n autenticado; ser redirecionado para login + query next; autenticar e ver se é redirecionado para editar blog de outro usuário
+    def test_authenticated_user_can_get_his_blog_edit_page(self): # fazer 1 só para get e post? trying_acess_to
+        self.client.force_login(self.user)
+        response = self.client.get(self.edit_blog_url)
+        self.assertEqual(response.status_code, 200)
+
+    def test_authenticated_user_can_post_on_his_blog_edit_page(self):
+        self.client.force_login(self.user)
+        response = self.client.post(self.edit_blog_url, data={'title': 'Edited test'})
+        my_blogs_url = reverse("blog:my_blogs")
+        self.assertRedirects(response, my_blogs_url)
+
+        # Check if title really changed.
+        self.blog.refresh_from_db()
+        self.assertEqual(self.blog.title, 'Edited test')
+
+    def test_authenticated_user_cant_get_others_blog_edit_page(self):
+        self.client.force_login(self.user)
+        response = self.client.get(self.edit_blog_url2)
+        self.assertEqual(response.status_code, 404)
+
+    def test_authenticated_user_cant_post_on_others_blog_edit_page(self):
+        self.client.force_login(self.user)
+        response = self.client.post(self.edit_blog_url2, data={'title': 'Edited title'})
+        self.assertEqual(response.status_code, 404)
+
+        # Check if title really did not change.
+        self.blog2.refresh_from_db()
+        self.assertEqual(self.blog2.title, 'Test2')
+        
+    def test_authenticated_user_cant_get_nonexistent_blog_edit_page(self):
+        self.client.force_login(self.user)
+        blog_id = 3 # A nonexistent blog id.
+        response = self.client.get(reverse('blog:edit_blog', kwargs={'blog_id': blog_id}))
+        self.assertEqual(response.status_code, 404)
+
+    def test_authenticated_user_cant_post_on_nonexistent_blog_edit_page(self):
+        self.client.force_login(self.user)
+        nonexistent_blog_id = 3
+        nonexistent_blog_url = reverse(
+            'blog:edit_blog', kwargs={'blog_id': nonexistent_blog_id})
+        response = self.client.post(
+            nonexistent_blog_url, data={'title': 'Test'})
+        self.assertEqual(response.status_code, 404)
 
 
-# posts
-    # unauthenticated user receives 404? redirected to login?
-    # authenticated user can acess posts from other users? should have permission system?
-    # blogs with no posts?
+    class PostsViewTests(TestCase):
+        pass
+        # unauthenticated user redirected to login?
+        # authenticated user can acess posts from other users?
+        # blogs with no posts show "no posts added"?
 
 
-# new_post
-    # unauthenticated user receives 404? redirected to login?
-    # authenticated user can create posts for other users? should have permission system?
+    # new_post
+        # unauthenticated user redirected to login?
+        # authenticated user can create posts for other users?
 
-    # posts are vinculated to blogs?
-    # posts are vinculated to the correct blog an user?
-    # each blog have a different version of new_post url [IMPORTANT]
-
-
-# edit post
-    # unauthenticated user receives 404? redirected to login?
-    # authenticated user can edit posts for other users? should have permission system?
-
-    # are the user editing the correct blog's post?
-    # each blog have a different version of edit_post url [IMPORTANT]
+        # posts are vinculated to the correct blog?
+        # posts are vinculated to the correct blog and user?
+        # each blog have a different version of new_post url [IMPORTANT]
 
 
-# register
-    # after registering, the system automatically creates a Blog instance for the user?
-    # after registering, the system automatically login the user?
-    # succesfully registered?
-    # create first blog automatically?
+    # edit post
+        # unauthenticated user redirected to login?
+        # authenticated user can edit posts for other users?
+
+        # are the user editing the correct blog's post?
+        # each blog have a different version of edit_post url [IMPORTANT]
 
 
-# login
-    # login redireciona onde?
-    # se redirecionado para login, pra onde sou redirecionado depois? para o redirecionamento normal de login, ou para a url que tentei acessar antes de estar logado?
-    # after login, redirected to my_blogs (or other page)?
-    # succesfully logged?
+    # register
+        # after registering, the system automatically creates a Blog instance for the user?
+        # after registering, the system automatically login the user?
+        # succesfully registered?
+        # create first blog automatically?
 
 
-# other
-    # what happen if (un)authenticated user try to access unexisting blogs, posts,
-    # new/edit pages?
-    # test images creation and delete
+    # login
+        # login redireciona onde?
+        # se redirecionado para login, pra onde sou redirecionado depois? para o redirecionamento normal de login, ou para a url que tentei acessar antes de estar logado?
+        # after login, redirected to my_blogs (or other page)?
+        # succesfully logged?
+
+
+    # other
+        # what happen if (un)authenticated user try to access unexisting blogs, posts,
+        # new/edit pages?
+        # test images creation and delete
+        # Para os métodos que não deveriam ser aceitos, pode ser útil garantir que o servidor responde com 405 Method Not Allowed ou 403 Forbidden, principalmente em APIs (Django REST Framework, por exemplo).
