@@ -48,7 +48,7 @@ def edit_blog(request, blog_id):
         form = BlogForm(instance=blog)
     else:
         # Test if user owns the post's blog.
-        if request.user != blog.user: # NOT TESTED YET [need learn to make post requests with test client]
+        if request.user != blog.user:
             raise Http404
         
         form = BlogForm(request.POST, request.FILES, instance=blog)

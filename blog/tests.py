@@ -2,13 +2,23 @@ from django.test import TestCase
 from django.urls import reverse
 from urllib.parse import urlencode
 from django.contrib.auth import get_user_model, get_user
-from .models import Blog
+from .models import Blog, Post
 
 
 User = get_user_model()
 
 
-# create base class to create users, blogs, urls, etc...
+# class x(TestCase):
+#     def unauthenticated_user_is_redirected_to_login(self, url):
+#         # Ensures that no user is logged in.
+#         self.client.logout() # o que esse método faz? clean session?
+#         self.assertIsNone(self.client.session.get("_auth_user_id"))
+
+#         my_blogs_url = reverse("blog:my_blogs")
+#         response = self.client.get(my_blogs_url)
+#         query_string = urlencode({'next': my_blogs_url})
+#         login_url = reverse("accounts:login")
+#         self.assertRedirects(response, f"{login_url}?{query_string}")
 
 
 # class IndexViewTests
@@ -95,6 +105,7 @@ class NewBlogViewTests(TestCase):
         #post
         #n logado;tentar criar blog;redirect to login;login;redir to myblogs?
     
+    # mudar nomes dos testes; user_get, user_post, etc...
     def test_new_blog_is_associated_to_correct_user(self):
         user = User.objects.create_user(
             username='Testuser',
@@ -192,20 +203,74 @@ class EditBlogViewTests(TestCase):
         self.assertEqual(response.status_code, 404)
 
 
-    class PostsViewTests(TestCase):
-        pass
-        # unauthenticated user redirected to login?
-        # authenticated user can acess posts from other users?
-        # blogs with no posts show "no posts added"?
+class PostsViewTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        # User 1.
+        cls.user = User.objects.create_user(
+            username='Testuser',
+            email='testemail@example.com',
+            password='mypassword123')
+        cls.blog = Blog.objects.create(user=cls.user, title='Test')
+        cls.posts_url = reverse("blog:posts", kwargs={'blog_id': cls.blog.id})
+        # User 2.
+        cls.user2 = User.objects.create_user(
+            username='Testuser2',
+            email='testemail2@example.com',
+            password='mypassword123')
+
+    def test_unauthenticated_user_is_redirected_to_login(self):
+        response = self.client.get(self.posts_url)
+        query_string = urlencode({'next': self.posts_url})
+        login_url = reverse("accounts:login")
+        self.assertRedirects(response, f"{login_url}?{query_string}")
+
+    def test_authenticated_user_one_post(self):
+        Post.objects.create(blog=self.blog, title='Test', text='Test') # após fazer isso existe 1 post?
+        self.client.force_login(self.user)
+        response = self.client.get(self.posts_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertCountEqual(
+            Post.objects.values_list("id", flat=True),
+            response.context['posts'].values_list("id", flat=True))
+        
+    def test_authenticated_user_two_posts(self):
+        Post.objects.create(blog=self.blog, title='Test', text='Test')
+        Post.objects.create(blog=self.blog, title='Test', text='Test') # Existem 2 posts?
+        self.client.force_login(self.user)
+        response = self.client.get(self.posts_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertCountEqual(
+            Post.objects.values_list("id", flat=True),
+            response.context['posts'].values_list("id", flat=True))
+
+    def test_authenticated_user_cant_see_other_user_posts(self):
+        self.client.force_login(self.user2)
+        response = self.client.get(self.posts_url)
+        self.assertEqual(response.status_code, 404)
+
+    def test_authenticated_user_with_no_blogs(self):
+        blog = Blog.objects.create(user=self.user2, title='Test')
+        posts_url = reverse("blog:posts", kwargs={'blog_id': blog.id})
+        self.client.force_login(self.user2)
+        response =  self.client.get(posts_url)
+        self.assertContains(response, 'No posts added...')
+
+    def test_authenticated_user_cant_access_posts_from_nonexisting_blog(self):
+        blog_id = 2 # blog realmente não existe?
+        posts_url = reverse("blog:posts", kwargs={'blog_id': blog_id})
+        self.client.force_login(self.user2)
+        response =  self.client.get(posts_url)
+        self.assertEqual(response.status_code, 404)
 
 
-    # new_post
-        # unauthenticated user redirected to login?
-        # authenticated user can create posts for other users?
+# new_post
+    # unauthenticated user redirected to login?
+    # authenticated user can create posts for other users?
 
-        # posts are vinculated to the correct blog?
-        # posts are vinculated to the correct blog and user?
-        # each blog have a different version of new_post url [IMPORTANT]
+    # posts are vinculated to the correct blog?
+    # posts are vinculated to the correct blog and user?
+    # each blog have a different version of new_post url [IMPORTANT]
 
 
     # edit post
