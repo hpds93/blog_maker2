@@ -80,19 +80,12 @@ def posts(request, blog_id):
 @login_required
 def new_post(request, blog_id):
     """Create a new post."""
-
     blog = get_object_or_404(Blog, id=blog_id)
-
     if request.user != blog.user:
         raise Http404
-    
     if request.method != 'POST':
         form = PostForm()
     else:
-        # Test if current user owns the blog.
-        if request.user != blog.user: # NOT TESTED YET [need to learn to make post requests with test client
-            raise Http404
-        
         form = PostForm(request.POST, request.FILES)
         if form.is_valid():
             post = form.save(commit=False)

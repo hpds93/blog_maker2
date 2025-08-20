@@ -8,17 +8,13 @@ from .models import Blog, Post
 User = get_user_model()
 
 
-# class x(TestCase):
-#     def unauthenticated_user_is_redirected_to_login(self, url):
-#         # Ensures that no user is logged in.
-#         self.client.logout() # o que esse método faz? clean session?
-#         self.assertIsNone(self.client.session.get("_auth_user_id"))
-
-#         my_blogs_url = reverse("blog:my_blogs")
-#         response = self.client.get(my_blogs_url)
-#         query_string = urlencode({'next': my_blogs_url})
-#         login_url = reverse("accounts:login")
-#         self.assertRedirects(response, f"{login_url}?{query_string}")
+class UnauthenticatedUserIsRedirectedToLogin(TestCase):
+    def test_unauthenticated_user_is_redirected_to_login(self):
+        if self.__class__.__name__ != 'UnauthenticatedUserIsRedirectedToLogin':
+            response = self.client.get(self.url)
+            query_string = urlencode({'next': self.url})
+            login_url = reverse("accounts:login")
+            self.assertRedirects(response, f"{login_url}?{query_string}")
 
 
 # class IndexViewTests
@@ -203,7 +199,7 @@ class EditBlogViewTests(TestCase):
         self.assertEqual(response.status_code, 404)
 
 
-class PostsViewTests(TestCase):
+class PostsViewTests(UnauthenticatedUserIsRedirectedToLogin):
     @classmethod
     def setUpTestData(cls):
         # User 1.
@@ -212,23 +208,17 @@ class PostsViewTests(TestCase):
             email='testemail@example.com',
             password='mypassword123')
         cls.blog = Blog.objects.create(user=cls.user, title='Test')
-        cls.posts_url = reverse("blog:posts", kwargs={'blog_id': cls.blog.id})
+        cls.url = reverse("blog:posts", kwargs={'blog_id': cls.blog.id})
         # User 2.
         cls.user2 = User.objects.create_user(
             username='Testuser2',
             email='testemail2@example.com',
             password='mypassword123')
 
-    def test_unauthenticated_user_is_redirected_to_login(self):
-        response = self.client.get(self.posts_url)
-        query_string = urlencode({'next': self.posts_url})
-        login_url = reverse("accounts:login")
-        self.assertRedirects(response, f"{login_url}?{query_string}")
-
     def test_authenticated_user_one_post(self):
         Post.objects.create(blog=self.blog, title='Test', text='Test') # após fazer isso existe 1 post?
         self.client.force_login(self.user)
-        response = self.client.get(self.posts_url)
+        response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
         self.assertCountEqual(
             Post.objects.values_list("id", flat=True),
@@ -238,7 +228,7 @@ class PostsViewTests(TestCase):
         Post.objects.create(blog=self.blog, title='Test', text='Test')
         Post.objects.create(blog=self.blog, title='Test', text='Test') # Existem 2 posts?
         self.client.force_login(self.user)
-        response = self.client.get(self.posts_url)
+        response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
         self.assertCountEqual(
             Post.objects.values_list("id", flat=True),
@@ -246,7 +236,7 @@ class PostsViewTests(TestCase):
 
     def test_authenticated_user_cant_see_other_user_posts(self):
         self.client.force_login(self.user2)
-        response = self.client.get(self.posts_url)
+        response = self.client.get(self.url)
         self.assertEqual(response.status_code, 404)
 
     def test_authenticated_user_with_no_blogs(self):
@@ -264,21 +254,90 @@ class PostsViewTests(TestCase):
         self.assertEqual(response.status_code, 404)
 
 
-# new_post
-    # unauthenticated user redirected to login?
-    # authenticated user can create posts for other users?
+class NewPostViewTests(UnauthenticatedUserIsRedirectedToLogin):
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = User.objects.create_user(
+            username='Testuser',
+            email='testemail@example.com',
+            password='mypassword123')
+        cls.blog = Blog.objects.create(user=cls.user, title='Test')
+        cls.url = reverse('blog:new_post', kwargs={'blog_id': cls.blog.id})
+        cls.user2 = User.objects.create_user(
+            username='Testuser2',
+            email='testemail2@example.com',
+            password='mypassword123')
+        cls.posts_url = reverse("blog:posts", kwargs={'blog_id': cls.blog.id})
+        cls.post_data = {'title': 'Test', 'text': 'Test'}
+        
+    def test_authenticated_user_get_his_new_post_page(self):
+        self.client.force_login(self.user)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
 
-    # posts are vinculated to the correct blog?
-    # posts are vinculated to the correct blog and user?
-    # each blog have a different version of new_post url [IMPORTANT]
+    def test_authenticated_user_post_his_new_post_page(self):
+        self.client.force_login(self.user)
+        response = self.client.post(self.url, data=self.post_data)
+        self.assertRedirects(response, self.posts_url)
+
+    def test_one_post(self):
+        self.client.force_login(self.user)
+        self.client.post(self.url, data=self.post_data)
+        self.assertEqual(Post.objects.filter(blog__user=self.user).count(), 1)
+    
+    def test_two_posts(self):
+        self.client.force_login(self.user)
+        self.client.post(self.url, data=self.post_data)
+        self.client.post(self.url, data=self.post_data)
+        self.assertEqual(Post.objects.filter(blog__user=self.user).count(), 2)
+
+    def test_authenticated_user_get_other_user_new_post_page(self):
+        self.client.force_login(self.user2)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 404)
+
+    def test_authenticated_user_post_other_user_new_post_page(self):
+        self.client.force_login(self.user2)
+        response = self.client.post(self.url, data=self.post_data)
+        self.assertEqual(response.status_code, 404)
+
+    def test_authenticated_user_get_new_post_page_for_nonexistent_blog(self):
+        self.client.force_login(self.user)
+        nonexistent_blog_id = 2 # setuptestdata?
+        new_post_url_for_nonexistent_blog = reverse( # setuptestdata?
+            'blog:new_post', kwargs={'blog_id': nonexistent_blog_id}
+            )
+        response = self.client.get(new_post_url_for_nonexistent_blog)
+        self.assertEqual(response.status_code, 404)
+
+    def test_authenticated_user_post_new_post_page_for_nonexistent_blog(self):
+        self.client.force_login(self.user)
+        nonexistent_blog_id = 2
+        new_post_url_for_nonexistent_blog = reverse(
+            'blog:new_post', kwargs={'blog_id': nonexistent_blog_id}
+            )
+        response = self.client.post(
+            new_post_url_for_nonexistent_blog, data=self.post_data
+            )
+        self.assertEqual(response.status_code, 404)
 
 
-    # edit post
-        # unauthenticated user redirected to login?
-        # authenticated user can edit posts for other users?
+class EditPostViewTests(UnauthenticatedUserIsRedirectedToLogin):
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = User.objects.create_user(
+            username='Testuser',
+            email='testemail@example.com',
+            password='mypassword123')
+        cls.blog = Blog.objects.create(user=cls.user, title='Test')
+        cls.post = Post.objects.create(blog=cls.blog, title='Test', text='Test')
+        cls.url = reverse('blog:edit_post', kwargs={'post_id': cls.post.id})
+
+        # user can edit his post?
+
+        # user can edit posts for other users?
 
         # are the user editing the correct blog's post?
-        # each blog have a different version of edit_post url [IMPORTANT]
 
 
     # register
@@ -296,7 +355,4 @@ class PostsViewTests(TestCase):
 
 
     # other
-        # what happen if (un)authenticated user try to access unexisting blogs, posts,
-        # new/edit pages?
-        # test images creation and delete
         # Para os métodos que não deveriam ser aceitos, pode ser útil garantir que o servidor responde com 405 Method Not Allowed ou 403 Forbidden, principalmente em APIs (Django REST Framework, por exemplo).
