@@ -1,13 +1,15 @@
 from django.test import TestCase
 
 
-# register
-        # automatically login the user?
-        # succesfully registered
-        # create first blog automatically
+# class RegisterTests(TestCase):
+#     pass
+    # automatically login the user?
+    # succesfully registered
+    # create first blog automatically
+    # validação de dados
 
 
-    # login
-        # login redireciona onde?
-        # after login, redirected to my_blogs (or other page)?
-        # succesfully logged?
+# login
+    # login com dados errados
+    # after login, redirected to my_blogs (or other page)?
+    # succesfully logged

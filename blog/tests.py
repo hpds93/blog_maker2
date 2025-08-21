@@ -1,4 +1,5 @@
 from django.test import TestCase
+from django.conf import settings
 from django.urls import reverse
 from urllib.parse import urlencode
 from django.contrib.auth import get_user_model, get_user
@@ -8,8 +9,36 @@ from .models import Blog, Post
 User = get_user_model()
 
 
+class AnonymousRedirectedToLogin(TestCase):
+    def anonymous_redirected_to_login(self, url):
+        response = self.client.get(url)
+        query_string = urlencode({'next': url})
+        login_url = reverse(settings.LOGIN_URL)
+        self.assertRedirects(response, f"{login_url}?{query_string}")
+
+
+class IndexViewTests(TestCase):
+    url = reverse('blog:index')
+
+    def test_200(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+    
+    def test_no_queries(self):
+        with self.assertNumQueries(0):
+            self.client.get(self.url)
+
+
+class MyBlogsViewTests(AnonymousRedirectedToLogin):
+    @classmethod
+    def setUpTestData(cls):
+        cls.url = reverse('blog:my_blogs')
+
+    def test_anonymous_redirected_to_login(self):
+        self.anonymous_redirected_to_login(self.url)
+
+
 class UnauthenticatedUserIsRedirectedToLogin(TestCase):
-    # melhor remover test
     def test_unauthenticated_user_is_redirected_to_login(self):
         if self.__class__.__name__ != 'UnauthenticatedUserIsRedirectedToLogin':
             response = self.client.get(self.url)
@@ -21,7 +50,7 @@ class UnauthenticatedUserIsRedirectedToLogin(TestCase):
 # class IndexViewTests
 
 
-class MyBlogsViewTests(TestCase):
+class MyBlogsViewTests2(TestCase):
     @classmethod
     def setUpTestData(cls):
         # Create 3 users.
@@ -378,9 +407,9 @@ class EditPostViewTests(UnauthenticatedUserIsRedirectedToLogin):
 
     # post nonexisting post # qual erro deve ser retornado?
 
-    # COMMIT!!!!
-    
 
-
-    # other
-        # Para os métodos que não deveriam ser aceitos, pode ser útil garantir que o servidor responde com 405 Method Not Allowed ou 403 Forbidden, principalmente em APIs (Django REST Framework, por exemplo).
+# other
+    # Para os métodos que não deveriam ser aceitos, pode
+    # ser útil garantir que o servidor responde com 405 
+    # Method Not Allowed ou 403 Forbidden, principalmente 
+    # em APIs (Django REST Framework, por exemplo).

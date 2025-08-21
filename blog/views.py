@@ -6,7 +6,7 @@ from django.http import Http404
 
 
 def index(request):
-    """The home page for Blogger Clone."""
+    """The home page for Blog Maker."""
     return render(request, 'blog/index.html')
 
 
