@@ -9,6 +9,7 @@ User = get_user_model()
 
 
 class UnauthenticatedUserIsRedirectedToLogin(TestCase):
+    # melhor remover test
     def test_unauthenticated_user_is_redirected_to_login(self):
         if self.__class__.__name__ != 'UnauthenticatedUserIsRedirectedToLogin':
             response = self.client.get(self.url)
@@ -269,18 +270,20 @@ class NewPostViewTests(UnauthenticatedUserIsRedirectedToLogin):
             password='mypassword123')
         cls.posts_url = reverse("blog:posts", kwargs={'blog_id': cls.blog.id})
         cls.post_data = {'title': 'Test', 'text': 'Test'}
+
+    # no post test for unauthenticated user #
         
-    def test_authenticated_user_get_his_new_post_page(self):
+    def test_owner_get(self):
         self.client.force_login(self.user)
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
 
-    def test_authenticated_user_post_his_new_post_page(self):
+    def test_owner_post(self):
         self.client.force_login(self.user)
         response = self.client.post(self.url, data=self.post_data)
         self.assertRedirects(response, self.posts_url)
 
-    def test_one_post(self):
+    def test_authenticated_user_one_post(self):
         self.client.force_login(self.user)
         self.client.post(self.url, data=self.post_data)
         self.assertEqual(Post.objects.filter(blog__user=self.user).count(), 1)
@@ -331,27 +334,52 @@ class EditPostViewTests(UnauthenticatedUserIsRedirectedToLogin):
             password='mypassword123')
         cls.blog = Blog.objects.create(user=cls.user, title='Test')
         cls.post = Post.objects.create(blog=cls.blog, title='Test', text='Test')
-        cls.url = reverse('blog:edit_post', kwargs={'post_id': cls.post.id})
+        cls.edit_post_url = reverse('blog:edit_post', kwargs={'post_id': cls.post.id})
+        cls.url = cls.edit_post_url
+        cls.post_data = {'title': 'Test', 'text': 'Test'}
+        cls.post_data_edited = {'title': 'Edited', 'text': 'Edited'}
+        cls.posts_url = reverse('blog:posts', kwargs={'blog_id': cls.blog.id})
+        cls.non_owner = User.objects.create_user(
+            username='Testuser2',
+            email='testemail2@example.com',
+            password='mypassword123')
 
-        # user can edit his post?
+    def test_owner_get(self):
+        self.client.force_login(self.user)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
 
-        # user can edit posts for other users?
+    def test_owner_post(self):
+        self.client.force_login(self.user)
+        # talvez melhor criar post aqui #
+        response = self.client.post(self.url, data=self.post_data)
+        self.assertRedirects(response, self.posts_url)
 
-        # are the user editing the correct blog's post?
+    def test_edited(self):
+        self.client.force_login(self.user)
+        # talvez melhor criar post aqui #
+        self.client.post(self.url, data=self.post_data_edited)
+        self.post.refresh_from_db()
+        self.assertEqual(
+            (self.post.title, self.post.text),
+            (self.post_data_edited['title'], self.post_data_edited['text']))
 
+    def test_non_owner_get(self):
+        self.client.force_login(self.non_owner)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 404)
 
-    # register
-        # after registering, the system automatically creates a Blog instance for the user?
-        # after registering, the system automatically login the user?
-        # succesfully registered?
-        # create first blog automatically?
+    def test_non_owner_post(self):
+        self.client.force_login(self.non_owner)
+        response = self.client.post(self.url, data=self.post_data)
+        self.assertEqual(response.status_code, 404)
 
+    # get nonexisting post # qual erro deve ser retornado?
 
-    # login
-        # login redireciona onde?
-        # se redirecionado para login, pra onde sou redirecionado depois? para o redirecionamento normal de login, ou para a url que tentei acessar antes de estar logado?
-        # after login, redirected to my_blogs (or other page)?
-        # succesfully logged?
+    # post nonexisting post # qual erro deve ser retornado?
+
+    # COMMIT!!!!
+    
 
 
     # other

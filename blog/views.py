@@ -63,7 +63,7 @@ def edit_blog(request, blog_id):
 
 
 @login_required
-def posts(request, blog_id):
+def posts(request, blog_id): # o q acontece se usuário tentar POST? # testar! #
     """Show all blog's posts."""
 
     blog = get_object_or_404(Blog, id=blog_id)
