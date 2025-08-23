@@ -47,9 +47,6 @@ class UnauthenticatedUserIsRedirectedToLogin(TestCase):
             self.assertRedirects(response, f"{login_url}?{query_string}")
 
 
-# class IndexViewTests
-
-
 class MyBlogsViewTests2(TestCase):
     @classmethod
     def setUpTestData(cls):
