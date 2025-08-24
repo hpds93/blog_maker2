@@ -1,3 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Blog Maker</title>
+    {% load django_bootstrap5 %}
+    {% bootstrap_css %}
+    {% bootstrap_javascript %}
+    
+    {% block style %}
+    {% endblock style %}
+</head>
+
+<body>
 <a href="{% url 'blog:index' %}">Blog Maker</a> |
 <a href="{% url 'blog:my_blogs' %}">My blogs</a> |
 {% if user.is_authenticated %}
@@ -12,6 +27,8 @@
     <a href="{% url 'accounts:register' %}">Register</a>
     <br>
 {% endif %}
-
 {% block content %}
 {% endblock content %}
+</body>
+
+</html>
