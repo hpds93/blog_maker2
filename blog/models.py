@@ -28,12 +28,21 @@ class Blog(models.Model):
     def save(self, *args, **kwargs):
         try:
             blog = Blog.objects.get(pk=self.pk)
-            old_images = blog.cover_image, blog.profile_image, blog.background_image
-            current_images = self.cover_image, self.profile_image, self.background_image
-            for image in current_images:
-                if image not in old_images:
-                    if image != 'no_img.png':
-                        os.remove(image.path)
+            images = (
+                (blog.cover_image, self.cover_image),
+                (blog.profile_image, self.profile_image),
+                (blog.background_image, self.background_image),
+            )
+            # old_images = blog.cover_image, blog.profile_image, blog.background_image
+            # current_images = self.cover_image, self.profile_image, self.background_image
+            for old, new in images:
+                if new != old != 'no_img.png':
+                    os.remove(old.path)
+
+            # for image, image2 in current_images, old_images:
+            #     if image not in old_images: # att img
+            #         if image != 'no_img.png':
+            #             os.remove(image.path)
         except Blog.DoesNotExist:
             pass
         return super().save(*args, **kwargs)

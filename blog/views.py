@@ -46,11 +46,7 @@ def edit_blog(request, blog_id):
 
     if request.method != 'POST':
         form = BlogForm(instance=blog)
-    else:
-        # Test if user owns the post's blog.
-        if request.user != blog.user:
-            raise Http404
-        
+    else:        
         form = BlogForm(request.POST, request.FILES, instance=blog)
         if form.is_valid():
             form.save()
@@ -72,7 +68,7 @@ def posts(request, blog_id): # o q acontece se usuário tentar POST? # testar! #
         raise Http404
     
     context = {'posts': blog.post_set.all().order_by('date_added'),
-               'blog_id': blog_id}
+               'blog': blog}
     
     return render(request, 'blog/posts.html', context)
 

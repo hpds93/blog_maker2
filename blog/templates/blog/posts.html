@@ -31,9 +31,16 @@
     <div class="row justify-content-center">
       <div class="col-md-8">
 
-        <!--Blog and posts data -->
-        <p><a href="{% url 'blog:edit_blog' blog_id %}">Edit blog</a></p>
-        <a href="{% url 'blog:new_post' blog_id %}">New post</a>
+        <!--Blog data -->
+        <p>{{ blog.title }}
+          <a href="{% url 'blog:edit_blog' blog.id %}">edit blog</a>
+          <a href="{% url 'blog:new_post' blog.id %}">new post</a>
+        </p>
+        <img src="{{ blog.profile_image.url }}" alt="profile image">
+        <img src="{{ blog.cover_image.url }}" alt="cover image">
+        <img src="{{ blog.background_image.url }}" alt="background image">
+        
+        <!--Posts data -->
         <p>Added posts:</p>
         {% for post in posts %}
           <p><a href="{% url 'blog:edit_post' post.id %}">{{ post.title }} {{ post.text|truncatechars:20 }} {{ post.date_added }}</a></p>
